@@ -59,6 +59,57 @@ module rpg {
         }
     }
 
+    action cura_sacerdote(personagem: Criatura): bool = {
+        all {
+            personagem.hp > 0,
+            personagem.classe == Sacerdote,
+            not(personagem.paralisia),
+            criaturas' = aumentar_hp(criaturas),
+            info_turno' = Some({ jogador: personagem, vitima: None, acao_tomada: "Cura sacerdote", dano: None })
+        }
+    }
+
+     pure def aumentar_hp(criaturas: List[Criatura]): List[Criatura] =
+        criaturas.foldl([], (acc, criatura) =>
+            if (criatura.classe != Inimigo and criatura.hp > 0){
+                val hp_ajustado = if(criatura.hp > 10) 20 else criatura.hp + 10
+                acc.append(criatura)
+            }
+            else {
+                acc.append(criatura)
+            }
+        )
+
+    action canto_bardo(personagem: Criatura): bool = {
+        all {
+            personagem.hp > 0,
+            personagem.classe == Bardo,
+            not(personagem.paralisia),
+            criaturas' = criaturas.replaceAt(criatura, { ...personagem, efeito: None }),
+            info_turno' = Some({ jogador: personagem, vitima: None, acao_tomada: "Canto bardo", dano: None })
+        }
+    }
+
+    action ataque(agressor: Criatura): bool = {
+        // // Escolhendo a vitima com filtro para ajudar o simulador, antes recebia a possivel_vitima escolhida no step mas o monstro nunca morria
+        // nondet pos_vitima = criaturas.indices().filter(x => x != criatura and if (agressor.classe == Monstro) criaturas[x].classe != Monstro else criaturas[x].classe == Monstro).oneOf()
+
+        // val vitima = criaturas[pos_vitima]
+        // val d = match agressor.efeito {
+        //     | Some(e) => if (agressor.classe == Monstro) 0 else 10
+        //     | None => if (agressor.classe == Monstro and turno != 1) 20 else 10
+        // }
+        // all {
+        //     vitima.hp > 0,
+        //     (agressor.classe == Inimigo and criaturas.select(x => x.ovelha_ou_urso()).length() > 0)
+        //         implies 
+        //     vitima.ovelha_ou_urso(),
+        //     criaturas' = criaturas.replaceAt(pos_vitima, vitima.dano(d)).replaceAt(criatura, { ...agressor, efeito: None }),
+        //     info_turno' = Some({ jogador: agressor, vitima: Some(vitima), acao_tomada: "ataque", dano: Some(d) })
+        // }
+    }
+
+    
     action init = {
         val dado = 1.to(20)
         nondet ini_sacerdote = dado.oneOf()
@@ -91,11 +142,15 @@ module rpg {
             any {
                 paralisar_personagem(jogador, possivel_vitima),
                 remover_paralisia(jogador, possivel_vitima),
+                jogador.cura_sacerdote(),
+                jogador.canto_bardo(),
             },
             criatura' = if (criatura + 1 == criaturas.length()) 0 else criatura + 1,
             turno' = if (criatura + 1 == criaturas.length()) turno + 1 else turno,
         }
     }
 
+    val monstro_nao_morre = criaturas.indices().filter(i => criaturas[i].classe == Inimigo).forall(i => criaturas[i].hp > 0)
+    val personagens_nao_morrem = criaturas.indices().filter(i => criaturas[i].classe != Inimigo).forall(x => criaturas[x].hp > 0)
 
 }
