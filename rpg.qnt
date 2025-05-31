@@ -33,6 +33,14 @@ module rpg {
             val depois = acc.select(c => criatura.iniciativa >= c.iniciativa)
             antes.append(criatura).concat(depois)
         )
+    
+    pure def aplicar_dano(c: criatura, dano: int): Criatura = {
+        if (c.hp - dano <= 0) {
+            { ...c, hp: 0 }
+        } else {
+            { ...c, hp: c.hp - dano }
+        }
+    }
 
     action paralisar_personagem(inimigo: Criatura, pos_personagem: int): bool = {
         val personagem = criaturas[pos_personagem]
@@ -91,22 +99,22 @@ module rpg {
     }
 
     action ataque(agressor: Criatura): bool = {
-        // // Escolhendo a vitima com filtro para ajudar o simulador, antes recebia a possivel_vitima escolhida no step mas o monstro nunca morria
-        // nondet pos_vitima = criaturas.indices().filter(x => x != criatura and if (agressor.classe == Monstro) criaturas[x].classe != Monstro else criaturas[x].classe == Monstro).oneOf()
+        nondet pos_vitima = criaturas.indices().filter(x => x != criatura and if (agressor.classe == Inimigo) criaturas[x].classe != Inimigo else criaturas[x].classe == Inimigo).oneOf()
 
-        // val vitima = criaturas[pos_vitima]
-        // val d = match agressor.efeito {
-        //     | Some(e) => if (agressor.classe == Monstro) 0 else 10
-        //     | None => if (agressor.classe == Monstro and turno != 1) 20 else 10
-        // }
-        // all {
-        //     vitima.hp > 0,
-        //     (agressor.classe == Inimigo and criaturas.select(x => x.ovelha_ou_urso()).length() > 0)
-        //         implies 
-        //     vitima.ovelha_ou_urso(),
-        //     criaturas' = criaturas.replaceAt(pos_vitima, vitima.dano(d)).replaceAt(criatura, { ...agressor, efeito: None }),
-        //     info_turno' = Some({ jogador: agressor, vitima: Some(vitima), acao_tomada: "ataque", dano: Some(d) })
-        // }
+        val vitima = criaturas[pos_vitima]
+
+        val canto_bardo_ativo = criaturas.select(x => x.classe == Bardo and x.efeito == Canto).length() > 0       
+
+        val dano = if (canto_bardo_ativo) 10 * 3 else 10
+        val pos_bardo = criaturas.indices().filter(x => criaturas[x].classe == Bardo and criaturas[x].efeito == Canto)
+
+        all {
+            vitima.hp > 0,
+            not(agressor.paralisia),
+            agressor != vitima,
+            criaturas' = criaturas.replaceAt(pos_vitima, aplicar_dano(vitima, dano)).replaceAt(pos_bardo, { ...criaturas[pos_bardo], efeito: None }),
+            info_turno' = Some({ jogador: agressor, vitima: Some(vitima), acao_tomada: "ataque", dano: Some(dano) })
+        }
     }
 
     
