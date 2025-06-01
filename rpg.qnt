@@ -5,12 +5,7 @@ module rpg {
 
     type TipoCriatura = Sacerdote | Bardo | Necromante | Inimigo
 
-    type TipoEfeito = Cura | Canto | Lanca
-
-    type Efeito = {
-        tipo: TipoEfeito,
-        hp: int
-    }
+    type Efeito = Cura | Canto | Lanca
 
     type Criatura = {
         hp: int,
@@ -34,7 +29,7 @@ module rpg {
             antes.append(criatura).concat(depois)
         )
     
-    pure def aplicar_dano(c: criatura, dano: int): Criatura = {
+    pure def aplicar_dano(c: Criatura, dano: int): Criatura = {
         if (c.hp - dano <= 0) {
             { ...c, hp: 0 }
         } else {
@@ -88,12 +83,13 @@ module rpg {
             }
         )
 
+    
     action canto_bardo(personagem: Criatura): bool = {
         all {
             personagem.hp > 0,
             personagem.classe == Bardo,
             not(personagem.paralisia),
-            criaturas' = criaturas.replaceAt(criatura, { ...personagem, efeito: None }),
+            criaturas' = criaturas.replaceAt(criatura, { ...personagem, efeito: Some(Canto) }),
             info_turno' = Some({ jogador: personagem, vitima: None, acao_tomada: "Canto bardo", dano: None })
         }
     }
@@ -103,10 +99,14 @@ module rpg {
 
         val vitima = criaturas[pos_vitima]
 
-        val canto_bardo_ativo = criaturas.select(x => x.classe == Bardo and x.efeito == Canto).length() > 0       
+        val bardo = criaturas.select(x => x.classe == Bardo).head()
 
-        val dano = if (canto_bardo_ativo) 10 * 3 else 10
-        val pos_bardo = criaturas.indices().filter(x => criaturas[x].classe == Bardo and criaturas[x].efeito == Canto)
+        val dano = match bardo.efeito {
+            | Some(e) => 10 * 3
+            | None => 10
+        }
+
+        nondet pos_bardo = criaturas.indices().filter(i => criaturas[i].classe == Bardo).oneOf()
 
         all {
             vitima.hp > 0,
