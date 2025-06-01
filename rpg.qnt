@@ -152,6 +152,7 @@ module rpg {
                 remover_paralisia(jogador, possivel_vitima),
                 jogador.cura_sacerdote(),
                 jogador.canto_bardo(),
+                jogador.ataque(),
             },
             criatura' = if (criatura + 1 == criaturas.length()) 0 else criatura + 1,
             turno' = if (criatura + 1 == criaturas.length()) turno + 1 else turno,
